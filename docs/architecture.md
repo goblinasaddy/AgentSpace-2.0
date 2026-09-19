@@ -26,30 +26,32 @@ AgentSpace 2.0 must support:
                                     ▼
                          ┌─────────────────────┐
                          │   Application API   │
-                         │ Auth / CRUD / RBAC  │
+                         │ JWT Auth / RBAC     │
+                         │ Rate Limit Guard    │
                          └───────┬─────┬───────┘
                                  │     │
                     ┌────────────┘     └─────────────┐
                     ▼                                ▼
              ┌──────────────┐                ┌──────────────┐
              │ PostgreSQL   │                │ Object Store │
-             │ Domain data  │                │ Files/assets │
+             │ Relational DB│                │ Files/assets │
              └──────────────┘                └──────────────┘
 
-                                 API
-                                  │
-                                  ▼
+                                 API (202 Accepted)
+                                   │
+                                   ▼
                          ┌─────────────────────┐
-                         │ Job / Queue Layer   │
+                         │ Queue / Worker Layer│
                          │ Redis + BullMQ      │
                          └──────────┬──────────┘
                                     │
-                 ┌──────────────────┼──────────────────┐
-                 ▼                  ▼                  ▼
-          Agent Runtime       Battle Worker     Verification Worker
-                 │                  │                  │
-                 ▼                  ▼                  ▼
-          Model Providers       Evaluators       Security/Test Engine
+                  ┌─────────────────┼─────────────────┐
+                  ▼                 ▼                 ▼
+           Runtime Worker     Battle Worker    Verification Worker
+           (Sandbox 30s)      (Parallel Runs)  (Security Suite)
+                  │                 │                 │
+                  ▼                 ▼                 ▼
+           Model Providers      Evaluators      Security Sandbox
 ```
 
 ## 3. Application layers

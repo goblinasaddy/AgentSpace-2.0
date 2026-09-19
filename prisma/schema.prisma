@@ -1,0 +1,502 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RepositoryVisibility {
+  PUBLIC
+  PRIVATE
+  INTERNAL
+}
+
+enum AgentType {
+  CHAT
+  INPUT_OUTPUT
+  TOOL
+  WORKFLOW
+}
+
+enum AgentStatus {
+  ACTIVE
+  ARCHIVED
+  DEPRECATED
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  TIMED_OUT
+  CANCELLED
+}
+
+enum BattleStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum VerificationRequestStatus {
+  PENDING
+  PROCESSING
+  PASSED
+  FAILED
+}
+
+enum TestStatus {
+  PASSED
+  FAILED
+  SKIPPED
+}
+
+enum ContributionEventType {
+  REPO_CREATED
+  AGENT_CREATED
+  VERSION_PUBLISHED
+  RUN_EXECUTED
+  FORK_CREATED
+  STARRED
+  ISSUE_CREATED
+  PR_CREATED
+  PR_MERGED
+  BATTLE_CREATED
+  VERIFICATION_REQUESTED
+}
+
+enum IssueStatus {
+  OPEN
+  CLOSED
+}
+
+enum PullRequestStatus {
+  OPEN
+  MERGED
+  CLOSED
+}
+
+enum VerificationBadgeType {
+  SECURITY_SCREENED
+  RELIABILITY_VERIFIED
+  PRIVACY_VERIFIED
+  COMPATIBILITY_VERIFIED
+  PERFORMANCE_VERIFIED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  avatarUrl    String?
+  bio          String?
+  website      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedOrganizations   Organization[]        @relation("OrgOwner")
+  repositories         Repository[]          @relation("UserRepositories")
+  publishedVersions    AgentVersion[]        @relation("PublishedVersions")
+  runs                 Run[]                 @relation("UserRuns")
+  contributions        ContributionEvent[]   @relation("UserContributions")
+  stars                Star[]                @relation("UserStars")
+  issues               Issue[]               @relation("UserIssues")
+  pullRequests         PullRequest[]         @relation("UserPullRequests")
+  battles              Battle[]              @relation("CreatedBattles")
+  votes                Vote[]                @relation("UserVotes")
+  verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
+
+  @@index([username])
+  @@index([email])
+}
+
+model Organization {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique
+  description String?
+  ownerId     String
+  visibility  RepositoryVisibility @default(PUBLIC)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  owner        User         @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  repositories Repository[] @relation("OrgRepositories")
+
+  @@index([slug])
+}
+
+model Repository {
+  id             String               @id @default(cuid())
+  ownerId        String
+  organizationId String?
+  name           String
+  slug           String
+  description    String?
+  visibility     RepositoryVisibility @default(PUBLIC)
+  defaultVersion String               @default("1.0.0")
+  forkedFromId   String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  owner        User          @relation("UserRepositories", fields: [ownerId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgRepositories", fields: [organizationId], references: [id], onDelete: SetNull)
+  forkedFrom   Repository?   @relation("RepoForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks        Repository[]  @relation("RepoForks")
+
+  agents        Agent[]             @relation("RepoAgents")
+  contributions ContributionEvent[] @relation("RepoContributions")
+  stars         Star[]              @relation("RepoStars")
+  issues        Issue[]             @relation("RepoIssues")
+  pullRequests  PullRequest[]       @relation("RepoPullRequests")
+  sourcePulls   PullRequest[]       @relation("SourceRepoPulls")
+
+  @@unique([ownerId, slug])
+  @@index([ownerId])
+  @@index([organizationId])
+  @@index([slug])
+}
+
+model Star {
+  id           String   @id @default(cuid())
+  userId       String
+  repositoryId String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation("UserStars", fields: [userId], references: [id], onDelete: Cascade)
+  repository Repository @relation("RepoStars", fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, repositoryId])
+  @@index([userId])
+  @@index([repositoryId])
+}
+
+model Issue {
+  id           String      @id @default(cuid())
+  repositoryId String
+  authorId     String
+  number       Int
+  title        String
+  body         String
+  status       IssueStatus @default(OPEN)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  repository Repository @relation("RepoIssues", fields: [repositoryId], references: [id], onDelete: Cascade)
+  author     User       @relation("UserIssues", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId])
+  @@index([authorId])
+}
+
+model PullRequest {
+  id           String            @id @default(cuid())
+  repositoryId String
+  authorId     String
+  sourceRepoId String?
+  number       Int
+  title        String
+  description  String?
+  status       PullRequestStatus @default(OPEN)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  repository Repository  @relation("RepoPullRequests", fields: [repositoryId], references: [id], onDelete: Cascade)
+  sourceRepo Repository? @relation("SourceRepoPulls", fields: [sourceRepoId], references: [id], onDelete: SetNull)
+  author     User        @relation("UserPullRequests", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId])
+  @@index([authorId])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now())
+
+  agents AgentCategory[] @relation("CategoryAgents")
+
+  @@index([slug])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  agents AgentTag[] @relation("TagAgents")
+
+  @@index([slug])
+}
+
+model AgentCategory {
+  agentId    String
+  categoryId String
+
+  agent    Agent    @relation("AgentCategories", fields: [agentId], references: [id], onDelete: Cascade)
+  category Category @relation("CategoryAgents", fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, categoryId])
+}
+
+model AgentTag {
+  agentId String
+  tagId   String
+
+  agent Agent @relation("AgentTags", fields: [agentId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation("TagAgents", fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, tagId])
+}
+
+model Agent {
+  id           String      @id @default(cuid())
+  repositoryId String
+  name         String
+  description  String?
+  type         AgentType   @default(INPUT_OUTPUT)
+  status       AgentStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  repository Repository      @relation("RepoAgents", fields: [repositoryId], references: [id], onDelete: Cascade)
+  versions   AgentVersion[]  @relation("AgentVersions")
+  categories AgentCategory[] @relation("AgentCategories")
+  tags       AgentTag[]      @relation("AgentTags")
+
+  @@index([repositoryId])
+}
+
+model AgentVersion {
+  id            String   @id @default(cuid())
+  agentId       String
+  version       String
+  configuration Json
+  inputSchema   Json?
+  outputSchema  Json?
+  releaseNotes  String?
+  publishedById String
+  publishedAt   DateTime @default(now())
+
+  agent                Agent                 @relation("AgentVersions", fields: [agentId], references: [id], onDelete: Cascade)
+  publishedBy          User                  @relation("PublishedVersions", fields: [publishedById], references: [id])
+  files                AgentFile[]           @relation("VersionFiles")
+  runs                 Run[]                 @relation("VersionRuns")
+  verificationBadges   VerificationBadge[]   @relation("VersionBadges")
+  battleParticipants   BattleParticipant[]   @relation("VersionBattleParticipants")
+  votedFor             Vote[]                @relation("PreferredVersionVotes")
+  verificationRequests VerificationRequest[] @relation("VersionVerificationRequests")
+  verificationReports  VerificationReport[]  @relation("VersionVerificationReports")
+
+  @@unique([agentId, version])
+  @@index([agentId])
+  @@index([publishedById])
+}
+
+model Battle {
+  id          String       @id @default(cuid())
+  creatorId   String
+  challenge   String
+  status      BattleStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+
+  creator      User                @relation("CreatedBattles", fields: [creatorId], references: [id], onDelete: Cascade)
+  participants BattleParticipant[] @relation("BattleParticipants")
+  results      BattleResult[]      @relation("BattleResults")
+  votes        Vote[]              @relation("BattleVotes")
+
+  @@index([creatorId])
+}
+
+model BattleParticipant {
+  id             String   @id @default(cuid())
+  battleId       String
+  agentVersionId String
+  createdAt      DateTime @default(now())
+
+  battle       Battle         @relation("BattleParticipants", fields: [battleId], references: [id], onDelete: Cascade)
+  agentVersion AgentVersion   @relation("VersionBattleParticipants", fields: [agentVersionId], references: [id], onDelete: Cascade)
+  results      BattleResult[] @relation("ParticipantResults")
+
+  @@unique([battleId, agentVersionId])
+  @@index([battleId])
+}
+
+model BattleResult {
+  id            String   @id @default(cuid())
+  battleId      String
+  participantId String
+  runId         String?
+  output        Json?
+  latencyMs     Int?
+  inputTokens   Int?
+  outputTokens  Int?
+  estimatedCost Float?
+  createdAt     DateTime @default(now())
+
+  battle      Battle            @relation("BattleResults", fields: [battleId], references: [id], onDelete: Cascade)
+  participant BattleParticipant @relation("ParticipantResults", fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([battleId])
+  @@index([participantId])
+}
+
+model Vote {
+  id                 String   @id @default(cuid())
+  battleId           String
+  userId             String
+  preferredVersionId String
+  comment            String?
+  createdAt          DateTime @default(now())
+
+  battle           Battle       @relation("BattleVotes", fields: [battleId], references: [id], onDelete: Cascade)
+  user             User         @relation("UserVotes", fields: [userId], references: [id], onDelete: Cascade)
+  preferredVersion AgentVersion @relation("PreferredVersionVotes", fields: [preferredVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([battleId, userId])
+  @@index([battleId])
+  @@index([userId])
+}
+
+model VerificationRequest {
+  id             String                    @id @default(cuid())
+  agentVersionId String
+  requestedById  String
+  status         VerificationRequestStatus @default(PENDING)
+  badges         VerificationBadgeType[]
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  agentVersion AgentVersion        @relation("VersionVerificationRequests", fields: [agentVersionId], references: [id], onDelete: Cascade)
+  requestedBy  User                @relation("UserVerificationRequests", fields: [requestedById], references: [id], onDelete: Cascade)
+  runs         VerificationRun[]   @relation("RequestVerificationRuns")
+  reports      VerificationReport[] @relation("RequestVerificationReports")
+
+  @@index([agentVersionId])
+  @@index([requestedById])
+}
+
+model VerificationRun {
+  id                 String    @id @default(cuid())
+  requestId          String
+  methodologyVersion String    @default("v1.0.0")
+  environment        String    @default("AgentSpace Isolated Sandbox v1")
+  status             TestStatus @default(PASSED)
+  createdAt          DateTime  @default(now())
+  completedAt        DateTime?
+
+  request VerificationRequest @relation("RequestVerificationRuns", fields: [requestId], references: [id], onDelete: Cascade)
+  tests   VerificationTest[]  @relation("RunVerificationTests")
+
+  @@index([requestId])
+}
+
+model VerificationTest {
+  id           String     @id @default(cuid())
+  runId        String
+  testName     String
+  testCategory String
+  status       TestStatus @default(PASSED)
+  evidence     Json?
+  createdAt    DateTime   @default(now())
+
+  run VerificationRun @relation("RunVerificationTests", fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model VerificationReport {
+  id             String   @id @default(cuid())
+  agentVersionId String
+  requestId      String
+  summary        String
+  evidenceData   Json
+  limitations    String
+  issuedAt       DateTime @default(now())
+
+  agentVersion AgentVersion        @relation("VersionVerificationReports", fields: [agentVersionId], references: [id], onDelete: Cascade)
+  request      VerificationRequest @relation("RequestVerificationReports", fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([agentVersionId])
+  @@index([requestId])
+}
+
+model VerificationBadge {
+  id             String                @id @default(cuid())
+  agentVersionId String
+  badgeType      VerificationBadgeType
+  issuedAt       DateTime              @default(now())
+
+  agentVersion AgentVersion @relation("VersionBadges", fields: [agentVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([agentVersionId, badgeType])
+  @@index([agentVersionId])
+}
+
+model AgentFile {
+  id             String   @id @default(cuid())
+  agentVersionId String
+  path           String
+  content        String
+  mimeType       String?  @default("text/plain")
+  createdAt      DateTime @default(now())
+
+  agentVersion AgentVersion @relation("VersionFiles", fields: [agentVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([agentVersionId, path])
+  @@index([agentVersionId])
+}
+
+model Run {
+  id             String    @id @default(cuid())
+  agentVersionId String
+  userId         String
+  input          Json
+  output         Json?
+  modelProvider  String    @default("gemini")
+  modelName      String    @default("gemini-2.5-flash")
+  status         RunStatus @default(QUEUED)
+  latencyMs      Int?
+  inputTokens    Int?
+  outputTokens   Int?
+  estimatedCost  Float?
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+
+  agentVersion AgentVersion @relation("VersionRuns", fields: [agentVersionId], references: [id], onDelete: Cascade)
+  user         User         @relation("UserRuns", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([agentVersionId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ContributionEvent {
+  id           String                @id @default(cuid())
+  userId       String
+  repositoryId String?
+  eventType    ContributionEventType
+  metadata     Json?
+  createdAt    DateTime              @default(now())
+
+  user       User        @relation("UserContributions", fields: [userId], references: [id], onDelete: Cascade)
+  repository Repository? @relation("RepoContributions", fields: [repositoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([repositoryId])
+  @@index([createdAt])
+}
