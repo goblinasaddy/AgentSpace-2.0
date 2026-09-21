@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, RefreshCw, AlertCircle } from "lucide-react";
+import { Search, RefreshCw, AlertCircle } from "lucide-react";
 import { AgentCard } from "@/components/agents/AgentCard";
 
 export default function ExplorePage() {
@@ -38,11 +38,11 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-white font-sans">Marketplace Discovery</h1>
-        <p className="text-xs text-[#a1a1aa] font-mono">
+        <h1 className="text-3xl font-extrabold text-white font-sans tracking-tight">Marketplace Discovery</h1>
+        <p className="text-xs text-[#6F7485] font-mono">
           Discover, filter, and inspect published AI agents in the AgentSpace ecosystem.
         </p>
       </div>
@@ -50,18 +50,18 @@ export default function ExplorePage() {
       {/* Search & Filter Controls */}
       <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
-          <Search className="w-4 h-4 text-[#8b5cf6] absolute left-3 top-3.5" />
+          <Search className="w-4 h-4 text-[#8B5CF6] absolute left-3.5 top-3.5" />
           <input
             type="text"
             placeholder="Search agents by name, tags, or description..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-3 rounded-xl bg-[#121215] border border-[#27272a] text-xs text-white font-mono focus:border-[#8b5cf6] focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0D101A] border border-white/10 text-xs text-white font-mono placeholder:text-[#6F7485] focus:border-[#8B5CF6] focus:outline-none transition-colors"
           />
         </div>
         <button
           type="submit"
-          className="px-6 py-3 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-mono text-xs font-bold rounded-xl shadow-lg shadow-[#8b5cf6]/20 transition-all"
+          className="px-6 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-mono text-xs font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all"
         >
           Search
         </button>
@@ -69,9 +69,9 @@ export default function ExplorePage() {
 
       {/* Results Grid */}
       {isLoading ? (
-        <div className="p-12 text-center text-xs font-mono text-[#a1a1aa] space-y-2 bg-[#121215] rounded-xl border border-[#27272a]">
-          <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#8b5cf6]" />
-          <p>Querying database records...</p>
+        <div className="p-12 text-center text-xs font-mono text-[#6F7485] space-y-3 bg-[#0D101A] rounded-2xl border border-white/10">
+          <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#8B5CF6]" />
+          <p>Querying persistent database records...</p>
         </div>
       ) : error ? (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono flex items-center gap-2">
@@ -79,7 +79,7 @@ export default function ExplorePage() {
           <span>{error}</span>
         </div>
       ) : agents.length === 0 ? (
-        <div className="p-12 text-center text-xs font-mono text-[#a1a1aa] bg-[#121215] rounded-xl border border-[#27272a]">
+        <div className="p-12 text-center text-xs font-mono text-[#6F7485] bg-[#0D101A] rounded-2xl border border-white/10">
           No published agents match your search filter.
         </div>
       ) : (

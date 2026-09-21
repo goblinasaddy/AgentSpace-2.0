@@ -3,24 +3,26 @@
 @import "tailwindcss/utilities";
 
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
-  --card: #121215;
-  --card-foreground: #f4f4f5;
-  --popover: #121215;
-  --popover-foreground: #f4f4f5;
+  --background: #05050d;
+  --background-secondary: #080a12;
+  --foreground: #ffffff;
+  --card: #0d101a;
+  --card-foreground: #ffffff;
+  --popover: #111522;
+  --popover-foreground: #ffffff;
   --primary: #8b5cf6;
   --primary-foreground: #ffffff;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #27272a;
-  --input: #27272a;
+  --secondary: #111522;
+  --secondary-foreground: #a8adbd;
+  --muted: #080a12;
+  --muted-foreground: #6f7485;
+  --accent: #4d9cff;
+  --accent-foreground: #ffffff;
+  --destructive: #fb7185;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --input: rgba(255, 255, 255, 0.08);
   --ring: #8b5cf6;
   --radius: 0.5rem;
 }
@@ -28,7 +30,8 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-feature-settings: "rlig" 1, "calt" 1;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
 }
 
 /* Custom scrollbars for dense logs and code */
@@ -38,14 +41,31 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #05050d;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Atmospheric Glow Utilities */
+.cosmic-glow-blue {
+  background: radial-gradient(circle, rgba(77, 156, 255, 0.18) 0%, rgba(5, 5, 13, 0) 70%);
+}
+
+.cosmic-glow-violet {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, rgba(5, 5, 13, 0) 70%);
+}
+
+.cosmic-glow-magenta {
+  background: radial-gradient(circle, rgba(217, 70, 239, 0.16) 0%, rgba(5, 5, 13, 0) 70%);
+}
+
+.horizon-line {
+  background: linear-gradient(90deg, transparent 0%, rgba(77, 156, 255, 0.4) 30%, rgba(139, 92, 246, 0.6) 50%, rgba(217, 70, 239, 0.4) 70%, transparent 100%);
 }
