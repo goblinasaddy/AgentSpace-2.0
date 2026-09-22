@@ -1,7 +1,7 @@
 import { prisma } from "@/infrastructure/database/client";
 import { RunStatus } from "@prisma/client";
 import { executionQueue } from "@/infrastructure/queue/execution.queue";
-import "@/workers/runtime.worker"; // Register worker listener
+import { processExecutionJob } from "@/workers/runtime.worker";
 
 export interface EnqueueExecutionInput {
   agentVersionId: string;
@@ -38,4 +38,10 @@ export async function enqueueExecutionJob(params: EnqueueExecutionInput) {
   await executionQueue.addJob({ runId: run.id });
 
   return run;
+}
+
+export async function executeAgent(params: EnqueueExecutionInput) {
+  const run = await enqueueExecutionJob(params);
+  const completedRun = await processExecutionJob({ runId: run.id });
+  return completedRun || run;
 }

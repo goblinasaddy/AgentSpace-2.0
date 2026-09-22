@@ -8,7 +8,7 @@ export default function ExplorePage() {
   const [query, setQuery] = useState("");
   const [agents, setAgents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
     fetchMarketplaceAgents();
@@ -16,17 +16,17 @@ export default function ExplorePage() {
 
   const fetchMarketplaceAgents = async () => {
     setIsLoading(true);
-    setError(null);
+    setError(false);
     try {
       const res = await fetch(`/api/v1/marketplace/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (res.ok) {
         setAgents(data.data || []);
       } else {
-        setError(data.error?.message || "Failed to query marketplace search.");
+        setError(true);
       }
     } catch {
-      setError("Network error connecting to AgentSpace search API.");
+      setError(true);
     } finally {
       setIsLoading(false);
     }
@@ -38,30 +38,30 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto font-sans">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold text-white font-sans tracking-tight">Marketplace Discovery</h1>
-        <p className="text-xs text-[#6F7485] font-mono">
-          Discover, filter, and inspect published AI agents in the AgentSpace ecosystem.
+      <div className="space-y-1">
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">Explore Agents</h1>
+        <p className="text-xs text-[#6F7485]">
+          Search agents, tools, and capabilities.
         </p>
       </div>
 
-      {/* Search & Filter Controls */}
+      {/* Search Controls */}
       <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="w-4 h-4 text-[#8B5CF6] absolute left-3.5 top-3.5" />
           <input
             type="text"
-            placeholder="Search agents by name, tags, or description..."
+            placeholder="Search agents..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0D101A] border border-white/10 text-xs text-white font-mono placeholder:text-[#6F7485] focus:border-[#8B5CF6] focus:outline-none transition-colors"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0D101A] border border-white/10 text-xs text-white placeholder:text-[#6F7485] focus:border-[#8B5CF6] focus:outline-none transition-colors"
           />
         </div>
         <button
           type="submit"
-          className="px-6 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-mono text-xs font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all"
+          className="px-6 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-md shadow-[#8B5CF6]/20 transition-all"
         >
           Search
         </button>
@@ -69,18 +69,27 @@ export default function ExplorePage() {
 
       {/* Results Grid */}
       {isLoading ? (
-        <div className="p-12 text-center text-xs font-mono text-[#6F7485] space-y-3 bg-[#0D101A] rounded-2xl border border-white/10">
+        <div className="p-12 text-center text-xs text-[#6F7485] space-y-3 bg-[#0D101A] rounded-2xl border border-white/10">
           <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#8B5CF6]" />
-          <p>Querying persistent database records...</p>
+          <p>Loading agents...</p>
         </div>
       ) : error ? (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
-          <span>{error}</span>
+        <div className="p-8 text-center space-y-3 bg-[#0D101A] rounded-2xl border border-white/10">
+          <AlertCircle className="w-6 h-6 mx-auto text-amber-400" />
+          <p className="text-sm text-white font-medium">Something went wrong.</p>
+          <p className="text-xs text-[#6F7485]">We couldn't load the marketplace right now.</p>
+          <div className="pt-2">
+            <button
+              onClick={() => fetchMarketplaceAgents()}
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       ) : agents.length === 0 ? (
-        <div className="p-12 text-center text-xs font-mono text-[#6F7485] bg-[#0D101A] rounded-2xl border border-white/10">
-          No published agents match your search filter.
+        <div className="p-12 text-center text-xs text-[#6F7485] bg-[#0D101A] rounded-2xl border border-white/10">
+          No agents match your search query.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

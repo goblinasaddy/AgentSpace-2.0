@@ -8,7 +8,7 @@ interface AgentCardProps {
   agent: {
     id: string;
     name: string;
-    description?: string;
+    description?: string | null;
     type?: string;
     versions?: any[];
     repository?: {

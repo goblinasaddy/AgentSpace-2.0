@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { Search, Lock, UserCheck, LogOut, Command } from "lucide-react";
 import { AgentSpaceLogo } from "../brand/AgentSpaceLogo";
 import { CommandPaletteModal } from "../search/CommandPaletteModal";
@@ -63,32 +62,22 @@ export function TopNav() {
   return (
     <>
       <header className="h-14 border-b border-white/10 bg-[#05050D]/90 backdrop-blur sticky top-0 z-40 px-4 flex items-center justify-between">
-        {/* Left: Brand */}
+        {/* Left: Singular Brand Mark & Name */}
         <div className="flex items-center space-x-3">
-          <Link href="/" className="flex items-center space-x-2.5 group">
-            <AgentSpaceLogo size="sm" />
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-sm tracking-tight text-white group-hover:text-[#A78BFA] transition-colors font-sans">
-                AgentSpace
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#8B5CF6]/10 text-[#A78BFA] font-mono border border-[#8B5CF6]/30">
-                2.0
-              </span>
-            </div>
-          </Link>
+          <AgentSpaceLogo size="sm" />
         </div>
 
         {/* Center: Command Palette Trigger */}
         <div className="flex-1 max-w-md mx-6">
           <button
             onClick={() => setIsCmdPaletteOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#0D101A] border border-white/10 hover:border-white/20 text-xs font-mono text-[#6F7485] hover:text-[#A8ADBD] transition-all"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#0D101A] border border-white/10 hover:border-white/20 text-xs font-sans text-[#6F7485] hover:text-[#A8ADBD] transition-all"
           >
             <div className="flex items-center space-x-2">
               <Search className="w-3.5 h-3.5 text-[#8B5CF6]" />
               <span>Search agents, repos, categories...</span>
             </div>
-            <div className="flex items-center space-x-1 text-[10px] bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+            <div className="flex items-center space-x-1 text-[10px] bg-white/5 px-1.5 py-0.5 rounded border border-white/10 font-mono">
               <Command className="w-3 h-3" />
               <span>K</span>
             </div>
@@ -99,13 +88,13 @@ export function TopNav() {
         <div className="flex items-center space-x-3">
           {authUser ? (
             <div className="flex items-center space-x-3 bg-[#0D101A] px-3 py-1.5 rounded-lg border border-white/10">
-              <div className="flex items-center space-x-2 text-xs font-mono text-[#34D399]">
+              <div className="flex items-center space-x-2 text-xs font-sans text-[#34D399]">
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>{authUser.username}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="text-xs font-mono text-[#6F7485] hover:text-white flex items-center gap-1 transition-colors"
+                className="text-xs font-sans text-[#6F7485] hover:text-white flex items-center gap-1 transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -113,10 +102,10 @@ export function TopNav() {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-mono text-xs font-medium transition-all shadow-md shadow-[#8B5CF6]/20 flex items-center space-x-1.5"
+              className="px-3 py-1.5 rounded-lg bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-sans text-xs font-medium transition-all shadow-md shadow-[#8B5CF6]/20 flex items-center space-x-1.5"
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Sign In / Register</span>
+              <span>Sign In</span>
             </button>
           )}
         </div>
