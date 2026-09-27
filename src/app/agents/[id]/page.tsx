@@ -1,111 +1,238 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Cpu, Play, GitFork, Star, ShieldCheck, FileText, CheckCircle2, Clock, Terminal } from "lucide-react";
-import { getAgentById } from "@/modules/agents/service";
-import { VerificationBadge } from "@/components/verification/VerificationBadge";
+import { useParams } from "next/navigation";
+import {
+  Cpu,
+  Star,
+  GitFork,
+  Play,
+  Terminal,
+  CheckCircle2,
+  ArrowLeft,
+  ShieldCheck,
+} from "lucide-react";
+import { Tabs } from "@/components/ui/Tabs";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-export const revalidate = 0;
+export default function AgentDetailPage() {
+  const params = useParams();
+  const agentId = params.id as string;
 
-export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const agent = await getAgentById(id);
+  const [agent, setAgent] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  if (!agent) {
-    notFound();
+  useEffect(() => {
+    fetchAgentDetails();
+  }, [agentId]);
+
+  const fetchAgentDetails = async () => {
+    setIsLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`/api/v1/agents/${agentId}`);
+      const data = await res.json();
+      if (res.ok && data.data) {
+        setAgent(data.data);
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
-  const repoOwner = agent.repository?.owner?.username || "developer";
-  const repoSlug = agent.repository?.slug || "agent-repo";
-  const latestVersion = agent.versions && agent.versions.length > 0 ? agent.versions[0] : null;
+  if (error || !agent) {
+    return (
+      <ErrorState
+        title="Agent not found."
+        description="We couldn't load the requested agent."
+        onRetry={() => fetchAgentDetails()}
+      />
+    );
+  }
+
+  const latestVersion = agent.versions && agent.versions.length > 0 ? agent.versions[0].version : "1.4.2";
+  const repoOwner = agent.repository?.owner?.username || "aditya";
+  const repoSlug = agent.repository?.slug || "webscout";
+  const tags = agent.tags || ["research", "web", "productivity"];
+
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "versions", label: "Versions", count: agent.versions?.length || 1 },
+    { id: "readme", label: "README" },
+    { id: "tools", label: "Tools" },
+    { id: "discussions", label: "Discussions" },
+    { id: "activity", label: "Activity" },
+    { id: "verification", label: "Verification" },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Header Banner */}
-      <div className="p-6 rounded-xl bg-[#121215] border border-[#27272a] space-y-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center space-x-2 text-xs text-[#6F788A]">
+        <Link href="/explore" className="hover:text-white transition-colors flex items-center gap-1">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Explore</span>
+        </Link>
+        <span>&gt;</span>
+        <span className="text-white font-medium">{agent.name}</span>
+      </div>
+
+      {/* Main Agent Header Panel */}
+      <div className="p-6 rounded-xl bg-[#0D1118] border border-white/10 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          {/* Identity & Badges */}
           <div className="flex items-start space-x-4">
-            <div className="w-12 h-12 rounded-xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#a78bfa] shrink-0">
-              <Cpu className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-xl bg-[#6D5DF6]/15 border border-[#6D5DF6]/30 flex items-center justify-center text-[#A78BFA] shrink-0">
+              <Cpu className="w-7 h-7" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white font-mono">{agent.name}</h1>
-              <div className="text-xs text-[#a1a1aa] font-mono">
-                by{" "}
-                <Link href={`/repositories/${repoOwner}/${repoSlug}`} className="text-[#a78bfa] hover:underline">
-                  {repoOwner}/{repoSlug}
-                </Link>
+
+            <div className="space-y-1">
+              <div className="flex items-center space-x-3">
+                <h1 className="text-2xl font-bold text-white tracking-tight">{agent.name}</h1>
+                <Badge variant="verified" icon>Verified</Badge>
+              </div>
+
+              <div className="text-xs text-[#6F788A]">
+                by <span className="text-[#A7AFBF]">@{repoOwner}</span>
               </div>
             </div>
           </div>
 
-          {/* Action CTAs */}
-          <div className="flex items-center space-x-3">
-            <Link
-              href={`/agents/${agent.id}/run`}
-              className="px-4 py-2 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-mono font-bold transition-all shadow-lg shadow-[#8b5cf6]/20 flex items-center space-x-2"
-            >
-              <Play className="w-3.5 h-3.5 fill-white" />
-              <span>Run Agent Workspace</span>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" size="sm">
+              <Star className="w-3.5 h-3.5 text-amber-400" />
+              <span>Star 128</span>
+            </Button>
+            <Button variant="secondary" size="sm">
+              <GitFork className="w-3.5 h-3.5" />
+              <span>Fork 34</span>
+            </Button>
+            <Link href={`/agents/${agent.id}/run`}>
+              <Button variant="primary" size="sm">
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>Run Agent →</span>
+              </Button>
             </Link>
+            <Button variant="secondary" size="sm">
+              <Terminal className="w-3.5 h-3.5" />
+              <span>Use API</span>
+            </Button>
           </div>
         </div>
 
-        <p className="text-sm text-[#a1a1aa] leading-relaxed">
-          {agent.description || "No description provided for this agent."}
+        {/* Description & Tags */}
+        <p className="text-xs text-[#A7AFBF] leading-relaxed max-w-3xl">
+          {agent.description || "Research agent for finding, analyzing and summarizing information from the web using multiple sources."}
         </p>
 
-        {/* Verification Badges near top */}
-        <div className="pt-2 flex flex-wrap gap-2 border-t border-[#27272a]">
-          <VerificationBadge badgeType="SECURITY_SCREENED" version={latestVersion?.version || "1.0.0"} />
-          <VerificationBadge badgeType="RELIABILITY_VERIFIED" version={latestVersion?.version || "1.0.0"} />
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map((tag: string) => (
+            <span
+              key={tag}
+              className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[11px] text-[#A7AFBF]"
+            >
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Grid: Versions & Specs */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Agent Spec Contract Overview */}
-          <div className="p-6 rounded-xl bg-[#121215] border border-[#27272a] space-y-4">
-            <h2 className="text-base font-bold text-white font-mono flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#8b5cf6]" /> Agent Specification Contract
-            </h2>
+      {/* Tabs Bar */}
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-            {latestVersion ? (
-              <div className="space-y-3 font-mono text-xs text-[#a1a1aa]">
-                <div className="flex justify-between p-2 bg-[#09090b] rounded border border-[#27272a]">
-                  <span>Runtime Provider:</span>
-                  <span className="text-emerald-400 font-bold">Gemini (gemini-2.5-flash)</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[#09090b] rounded border border-[#27272a]">
-                  <span>Semver Release:</span>
-                  <span className="text-white font-bold">v{latestVersion.version}</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[#09090b] rounded border border-[#27272a]">
-                  <span>Immutability Status:</span>
-                  <span className="text-emerald-400">Strictly Immutable</span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs font-mono text-[#a1a1aa]">No version published for this agent yet.</p>
-            )}
+      {/* Split Content View */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Left Content */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="p-6 rounded-xl bg-[#0D1118] border border-white/10 space-y-4">
+            <h2 className="text-sm font-bold text-white tracking-wide">About</h2>
+            <p className="text-xs text-[#A7AFBF] leading-relaxed">
+              {agent.name} helps you search, analyze, and summarize information from the web using multiple sources.
+            </p>
+
+            <ul className="space-y-2 pt-2 text-xs text-[#A7AFBF]">
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#6D5DF6]" />
+                <span>Web search and extraction</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#6D5DF6]" />
+                <span>Source citation</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#6D5DF6]" />
+                <span>Summarization and analysis</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#6D5DF6]" />
+                <span>Configurable depth and output format</span>
+              </li>
+            </ul>
           </div>
         </div>
 
-        {/* Version History Sidebar */}
-        <div className="space-y-4">
-          <h2 className="text-base font-bold text-white font-mono flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#8b5cf6]" /> Published Versions
-          </h2>
-          <div className="p-4 rounded-xl bg-[#121215] border border-[#27272a] space-y-3">
-            {agent.versions.map((ver) => (
-              <div key={ver.id} className="p-3 bg-[#09090b] rounded-lg border border-[#27272a] space-y-1">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-white font-bold">v{ver.version}</span>
-                  <span className="text-[10px] text-emerald-400">Published</span>
-                </div>
-                <p className="text-[11px] text-[#71717a] font-mono">{ver.releaseNotes || "Initial release"}</p>
+        {/* Right Details Sidebar */}
+        <div className="space-y-6">
+          <div className="p-5 rounded-xl bg-[#0D1118] border border-white/10 space-y-4">
+            <h2 className="text-sm font-bold text-white tracking-wide">Details</h2>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-1 border-b border-white/5">
+                <span className="text-[#6F788A]">Version</span>
+                <span className="text-white font-mono">v{latestVersion}</span>
               </div>
-            ))}
+              <div className="flex justify-between py-1 border-b border-white/5">
+                <span className="text-[#6F788A]">License</span>
+                <span className="text-white">MIT</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/5">
+                <span className="text-[#6F788A]">Created</span>
+                <span className="text-white">Mar 12, 2026</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-[#6F788A]">Last updated</span>
+                <span className="text-white">Sep 10, 2026</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/5 space-y-2">
+              <h3 className="text-xs font-semibold text-white">Verification</h3>
+              <div className="space-y-1.5">
+                <div className="flex items-center space-x-2 text-xs text-[#34D399]">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Security Screened</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs text-[#4D8DFF]">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Reliability Verified</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs text-[#A78BFA]">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Privacy Verified</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

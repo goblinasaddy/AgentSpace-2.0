@@ -1,109 +1,123 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { LayoutDashboard, FolderGit2, Cpu } from "lucide-react";
-import { prisma } from "@/infrastructure/database/client";
-import { AgentCard } from "@/components/agents/AgentCard";
+import { Cpu, Plus, Edit } from "lucide-react";
+import { Tabs } from "@/components/ui/Tabs";
+import { Button } from "@/components/ui/Button";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-export const revalidate = 0;
+export default function WorkspacePage() {
+  const [activeTab, setActiveTab] = useState("agents");
+  const [agents, setAgents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-export default async function DashboardPage() {
-  let repositories: any[] = [];
-  let agents: any[] = [];
-  let runs: any[] = [];
+  useEffect(() => {
+    fetchUserWorkspace();
+  }, []);
 
-  try {
-    const [fetchedRepos, fetchedAgents, fetchedRuns] = await Promise.all([
-      prisma.repository.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        include: {
-          owner: { select: { username: true, displayName: true } },
+  const fetchUserWorkspace = async () => {
+    setIsLoading(true);
+    setError(false);
+    try {
+      const token = localStorage.getItem("agentspace_token");
+      const res = await fetch("/api/v1/agents", {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-      }),
-      prisma.agent.findMany({
-        take: 6,
-        orderBy: { createdAt: "desc" },
-        include: {
-          repository: {
-            include: { owner: { select: { username: true } } },
-          },
-          versions: { take: 1, orderBy: { publishedAt: "desc" } },
-        },
-      }),
-      prisma.run.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
-    repositories = fetchedRepos;
-    agents = fetchedAgents;
-    runs = fetchedRuns;
-  } catch (err) {
-    console.warn("Database offline or unreachable, rendering fallback dashboard state.");
-  }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAgents(data.data || []);
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const tabs = [
+    { id: "agents", label: "My Agents", count: agents.length },
+    { id: "runs", label: "Runs" },
+    { id: "repositories", label: "Repositories" },
+  ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-white font-sans flex items-center gap-2">
-          <LayoutDashboard className="w-6 h-6 text-[#8b5cf6]" /> Developer Workspace & Dashboard
-        </h1>
-        <p className="text-xs text-[#a1a1aa] font-mono">
-          Manage your published agents, repositories, and active execution runs.
-        </p>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white tracking-tight">My Workspace</h1>
+        <Link href="/build">
+          <Button variant="primary" size="sm">
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Agent</span>
+          </Button>
+        </Link>
       </div>
 
-      {/* Repositories List Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white font-mono uppercase flex items-center gap-2">
-            <FolderGit2 className="w-4 h-4 text-[#8b5cf6]" /> Recent Repositories ({repositories.length})
-          </h2>
-        </div>
+      {/* Tabs */}
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
+      {/* Content */}
+      {isLoading ? (
         <div className="space-y-3">
-          {repositories.length === 0 ? (
-            <div className="p-6 bg-[#121215] border border-[#27272a] rounded-xl text-center text-xs font-mono text-[#a1a1aa]">
-              No repositories found. Create your first repository!
-            </div>
-          ) : (
-            repositories.map((repo) => (
-              <div key={repo.id} className="p-4 rounded-xl bg-[#121215] border border-[#27272a] flex items-center justify-between">
-                <div>
-                  <Link
-                    href={`/repositories/${repo.owner?.username || "dev"}/${repo.slug}`}
-                    className="text-sm font-mono font-bold text-white hover:text-[#c4b5fd]"
-                  >
-                    {repo.owner?.username || "dev"}/{repo.slug}
-                  </Link>
-                  <p className="text-xs text-[#a1a1aa] font-mono">{repo.description || "No description."}</p>
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#18181b] border border-[#27272a] text-[#a78bfa]">
-                  {repo.visibility}
-                </span>
-              </div>
-            ))
-          )}
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
         </div>
-      </div>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load workspace."
+          description="We couldn't retrieve your agents right now."
+          onRetry={() => fetchUserWorkspace()}
+        />
+      ) : agents.length === 0 ? (
+        <div className="p-12 text-center bg-[#0D1118] rounded-lg border border-white/10 space-y-3">
+          <p className="text-sm font-medium text-white">No agents in your workspace yet.</p>
+          <p className="text-xs text-[#6F788A]">Create your first agent to get started.</p>
+          <div className="pt-2">
+            <Link href="/build">
+              <Button variant="primary" size="sm">
+                <span>Create Agent</span>
+              </Button>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {agents.map((agent) => (
+            <div
+              key={agent.id}
+              className="p-4 rounded-lg bg-[#0D1118] border border-white/10 flex items-center justify-between hover:border-white/20 transition-all"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-md bg-[#6D5DF6]/15 border border-[#6D5DF6]/30 flex items-center justify-center text-[#A78BFA]">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <div>
+                  <Link href={`/agents/${agent.id}`} className="text-sm font-bold text-white hover:text-[#A78BFA] transition-colors">
+                    {agent.name}
+                  </Link>
+                  <p className="text-xs text-[#6F788A] line-clamp-1">{agent.description || "Autonomous agent."}</p>
+                </div>
+              </div>
 
-      {/* Agents Grid Section */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-bold text-white font-mono uppercase flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-[#8b5cf6]" /> Active Published Agents
-        </h2>
-        {agents.length === 0 ? (
-          <div className="p-6 bg-[#121215] border border-[#27272a] rounded-xl text-center text-xs font-mono text-[#a1a1aa]">
-            No published agents found.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {agents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
-        )}
-      </div>
+              <div className="flex items-center space-x-3">
+                <Link href={`/agents/${agent.id}`}>
+                  <Button variant="secondary" size="sm">
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Edit</span>
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
